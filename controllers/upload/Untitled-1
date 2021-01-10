@@ -1,0 +1,21 @@
+curl \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjEwMjQ3MjUwLCJleHAiOjE2MTI4MzkyNTB9.bElia9bdctPR9vlwbW-oka6hFa0du0uoD4NgE_eVUwM" \
+http://qswangs-mbp:1337/upload/uploadURL?name=a.txt
+
+{alternativeText: "", caption: "", name: null}
+alternativeText: ""
+caption: ""
+name: null
+}
+
+filename: file.name,
+            type: file.type,
+            size: file.size,
+            bucket: response.Bucket,
+            key: response.Key
+
+curl -X POST \
+-H "Content-Type: application/json" \
+-d '{"fileInfo":{"alternativeText": "", "caption": "", "name": null, "filename": "test.png", "type":"png", "size": 1000,"hash":"052e8a3fa0","Bucket":"bucket", "Key":"image/test_052e8a3fa0.png"}}' \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjEwMjQ3MjUwLCJleHAiOjE2MTI4MzkyNTB9.bElia9bdctPR9vlwbW-oka6hFa0du0uoD4NgE_eVUwM" \
+http://localhost:1337/upload
