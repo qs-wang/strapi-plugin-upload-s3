@@ -443,7 +443,7 @@ const ModalStepper = ({
             }
           };
 
-          const resposne = await axios.put(preSignedURL.url, file, options);
+          const response = await axios.put(preSignedURL.url, file, options);
 
           // Need take a looks of this error handlling, the structure may be not good.
           if(response.status != 200){
