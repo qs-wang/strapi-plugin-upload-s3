@@ -20,6 +20,22 @@ import InputModalStepperContext from '../../contexts/InputModal/InputModalDataMa
 import init from './init';
 import reducer, { initialState } from './reducer';
 
+import crypto from 'crypto';
+
+const slugify = require('@sindresorhus/slugify');
+const path = require('path');
+
+const nameToSlug = (name, options = { separator: '-' }) => slugify(name, options);
+
+const randomSuffix = () => crypto.randomBytes(5).toString('hex');
+
+const generateFileName = name => {
+  const baseName = nameToSlug(name, { separator: '_', lowercase: false });
+
+  return `${baseName}_${randomSuffix()}`;
+};
+
+
 /* eslint-disable indent */
 
 const InputModalStepperProvider = ({
@@ -406,24 +422,68 @@ const InputModalStepperProvider = ({
 
     const requests = filesToUpload.map(
       async ({ file, fileInfo, originalIndex, originalName, abortController }) => {
-        const formData = new FormData();
-        const headers = {};
         const infos = clone(fileInfo);
 
+        //Q.S.
         if (originalName === infos.name) {
           set(infos, 'name', null);
         }
 
-        formData.append('files', file);
-        formData.append('fileInfo', JSON.stringify(infos));
-
         try {
+          const ext = path.extname(file.name);
+          const basename = path.basename(file.name || infos.filename, ext);
+          const hash = generateFileName(basename);
+          // Q.s. request s3 put url
+          // run s3 put here
+          const filePath = file.path ? `${file.path}/` : '';
+          const s3FilePath = `${filePath}${hash}${ext}`;
+
+          const preSignedURL = await request(
+            `/${pluginId}/uploadURL?name=${s3FilePath}&type=${file.type}`,
+          );
+
+          var options = {
+            headers: {
+              'Content-Type': file.type
+            }
+          };
+
+          const response = await axios.put(preSignedURL.url, file, options);
+
+          // Need take a looks of this error handlling, the structure may be not good.
+          if(response.status != 200){
+            throw new Error(response);
+          }
+
+          const fullinfos = {
+            ...infos,
+            filename: file.name,
+            type: file.type,
+            size: file.size,
+            Bucket: preSignedURL.Bucket,
+            Key: preSignedURL.Key,
+            hash,
+            ext,
+          }
+
+
+          // const infosformData = new FormData();
+
+          // infosformData.append('files', JSON.stringify({
+          //   filename: file.name,
+          //   hash: file.hash,
+          //   type: file.type,
+          //   size: file.size,
+          // }));
+          // infosformData.append('infos', JSON.stringify(infos));
+
           const uploadedFile = await request(
             `/${pluginId}`,
             {
               method: 'POST',
-              headers,
-              body: formData,
+              body: JSON.stringify({
+                fileInfo: fullinfos,
+              }),
               signal: abortController.signal,
             },
             false,

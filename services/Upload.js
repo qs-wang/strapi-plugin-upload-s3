@@ -127,7 +127,6 @@ module.exports = {
   },
 
   async upload({ data }, { user } = {}) {
-    // console.log('data', data);
     const { fileInfo, ...metas } = data;
 
     // const fileArray = Array.isArray(files) ? files : [files];
@@ -135,7 +134,6 @@ module.exports = {
 
 
     const doUpload = async (fileInfo) => {
-      // console.log('info', fileInfo)
       //Q.s. keep it as enhanceFile for now. But is not doing any enhance tasks anymore
       const fileData = this.formatFileInfo(
         fileInfo,

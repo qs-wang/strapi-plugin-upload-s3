@@ -413,7 +413,6 @@ const ModalStepper = ({
 
   //Q.s.
   const handleUploadFiles = async () => {
-    console.log('UI starting upload file');
     dispatch({
       type: 'SET_FILES_UPLOADING_STATE',
     });
@@ -444,7 +443,12 @@ const ModalStepper = ({
             }
           };
 
-          await axios.put(preSignedURL.url, file, options);
+          const resposne = await axios.put(preSignedURL.url, file, options);
+
+          // Need take a looks of this error handlling, the structure may be not good.
+          if(response.status != 200){
+            throw new Error(response);
+          }
 
           const fullFileInfo = {
             ...fileInfo,
@@ -457,8 +461,6 @@ const ModalStepper = ({
             ext,
           }
 
-
-          console.log('full file info', fullFileInfo, file.mime);
 
           // const fileInfoformData = new FormData();
 

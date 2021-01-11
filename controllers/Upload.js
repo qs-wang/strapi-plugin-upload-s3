@@ -90,8 +90,6 @@ module.exports = {
       request: { body: { fileInfo = {} } },
     } = ctx;
 
-    console.log('request', fileInfo);
-    // console.log('ctx', ctx.request.body.fileInfo);
     const controller = resolveController(ctx);
 
     if (id) {
