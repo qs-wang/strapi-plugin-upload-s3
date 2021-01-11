@@ -191,16 +191,15 @@ module.exports = {
     //   height,
     // });
 
-    if (isImage(fileData.filename)){
-      fileData.url = `S3://${fileData.Bucket}/${fileData.Key}`;
-    }else{
+    if (isImage(fileData.name)){
       if(strapi.plugins.upload.config.AWS_REGION){
-        fileData.url = `https://${fileData.Bucket}.s3-${strapi.plugins.upload.config.AWS_REGION}.amazonaws.com/files/${fileData.Key}`;
+        fileData.url = `https://${fileData.Bucket}.s3-${strapi.plugins.upload.config.AWS_REGION}.amazonaws.com/${fileData.Key}`;
       }else{
-        fileData.url = `https://${fileData.Bucket}.s3.amazonaws.com/files/${fileData.Key}`;
+        fileData.url = `https://${fileData.Bucket}.s3.amazonaws.com/${fileData.Key}`;
       }
+    }else{
+      fileData.url = `S3://${fileData.Bucket}/${fileData.Key}`;
     }
-
     
     fileData.provider = 'S3';
 
