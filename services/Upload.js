@@ -21,6 +21,7 @@ const {
 const { MEDIA_UPDATE, MEDIA_CREATE, MEDIA_DELETE } = webhookUtils.webhookEvents;
 
 const { bytesToKbytes } = require('../utils/file');
+const isImage = require('is-image');
 
 const { UPDATED_BY_ATTRIBUTE, CREATED_BY_ATTRIBUTE } = contentTypesUtils.constants;
 
@@ -190,7 +191,17 @@ module.exports = {
     //   height,
     // });
 
-    fileData.url = `S3://${fileData.Bucket}/${fileData.Key}`;
+    if (isImage(fileData.filename)){
+      fileData.url = `S3://${fileData.Bucket}/${fileData.Key}`;
+    }else{
+      if(strapi.plugins.upload.config.AWS_REGION){
+        fileData.url = `https://${fileData.Bucket}.s3-${strapi.plugins.upload.config.AWS_REGION}.amazonaws.com/files/${fileData.Key}`;
+      }else{
+        fileData.url = `https://${fileData.Bucket}.s3.amazonaws.com/files/${fileData.Key}`;
+      }
+    }
+
+    
     fileData.provider = 'S3';
 
     return this.add(fileData, { user });
