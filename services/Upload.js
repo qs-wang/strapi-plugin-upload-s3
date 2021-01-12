@@ -222,79 +222,82 @@ module.exports = {
     return this.update({ id }, newInfos, { user });
   },
 
+  //FIXME: reimplment this for replace function
+  // do nuthing for now. Need fix the UI for replacing the file
+  // at UI side at first.
   async replace(id, { data, file }, { user } = {}) {
-    const config = strapi.plugins.upload.config;
+    // const config = strapi.plugins.upload.config;
 
-    const {
-      getDimensions,
-      generateThumbnail,
-      generateResponsiveFormats,
-    } = strapi.plugins.upload.services['image-manipulation'];
+    // const {
+    //   getDimensions,
+    //   generateThumbnail,
+    //   generateResponsiveFormats,
+    // } = strapi.plugins.upload.services['image-manipulation'];
 
-    const dbFile = await this.fetch({ id });
+    // const dbFile = await this.fetch({ id });
 
-    if (!dbFile) {
-      throw strapi.errors.notFound('file not found');
-    }
+    // if (!dbFile) {
+    //   throw strapi.errors.notFound('file not found');
+    // }
 
-    const { fileInfo } = data;
-    const fileData = await this.enhanceFile(file, fileInfo);
+    // const { fileInfo } = data;
+    // const fileData = await this.enhanceFile(file, fileInfo);
 
-    // keep a constant hash
-    _.assign(fileData, {
-      hash: dbFile.hash,
-      ext: dbFile.ext,
-    });
+    // // keep a constant hash
+    // _.assign(fileData, {
+    //   hash: dbFile.hash,
+    //   ext: dbFile.ext,
+    // });
 
-    // execute delete function of the provider
-    if (dbFile.provider === config.provider) {
-      await strapi.plugins.upload.provider.delete(dbFile);
+    // // execute delete function of the provider
+    // // if (dbFile.provider === config.provider) {
+    // //   await strapi.plugins.upload.provider.delete(dbFile);
 
-      if (dbFile.formats) {
-        await Promise.all(
-          Object.keys(dbFile.formats).map(key => {
-            return strapi.plugins.upload.provider.delete(dbFile.formats[key]);
-          })
-        );
-      }
-    }
+    // //   if (dbFile.formats) {
+    // //     await Promise.all(
+    // //       Object.keys(dbFile.formats).map(key => {
+    // //         return strapi.plugins.upload.provider.delete(dbFile.formats[key]);
+    // //       })
+    // //     );
+    // //   }
+    // // }
 
-    await strapi.plugins.upload.provider.upload(fileData);
+    // // await strapi.plugins.upload.provider.upload(fileData);
 
-    // clear old formats
-    _.set(fileData, 'formats', {});
+    // // clear old formats
+    // _.set(fileData, 'formats', {});
 
-    const thumbnailFile = await generateThumbnail(fileData);
-    if (thumbnailFile) {
-      await strapi.plugins.upload.provider.upload(thumbnailFile);
-      delete thumbnailFile.buffer;
-      _.set(fileData, 'formats.thumbnail', thumbnailFile);
-    }
+    // // const thumbnailFile = await generateThumbnail(fileData);
+    // // if (thumbnailFile) {
+    // //   await strapi.plugins.upload.provider.upload(thumbnailFile);
+    // //   delete thumbnailFile.buffer;
+    // //   _.set(fileData, 'formats.thumbnail', thumbnailFile);
+    // // }
 
-    const formats = await generateResponsiveFormats(fileData);
-    if (Array.isArray(formats) && formats.length > 0) {
-      for (const format of formats) {
-        if (!format) continue;
+    // const formats = await generateResponsiveFormats(fileData);
+    // if (Array.isArray(formats) && formats.length > 0) {
+    //   for (const format of formats) {
+    //     if (!format) continue;
 
-        const { key, file } = format;
+    //     const { key, file } = format;
 
-        await strapi.plugins.upload.provider.upload(file);
-        delete file.buffer;
+    //     // await strapi.plugins.upload.provider.upload(file);
+    //     // delete file.buffer;
 
-        _.set(fileData, ['formats', key], file);
-      }
-    }
+    //     _.set(fileData, ['formats', key], file);
+    //   }
+    // }
 
-    const { width, height } = await getDimensions(fileData.buffer);
-    delete fileData.buffer;
+    // const { width, height } = await getDimensions(fileData.buffer);
+    // delete fileData.buffer;
 
-    _.assign(fileData, {
-      provider: config.provider,
-      width,
-      height,
-    });
+    // _.assign(fileData, {
+    //   provider: config.provider,
+    //   width,
+    //   height,
+    // });
 
-    return this.update({ id }, fileData, { user });
+    // return this.update({ id }, fileData, { user });
   },
 
   async update(params, values, { user } = {}) {
@@ -350,17 +353,18 @@ module.exports = {
     const config = strapi.plugins.upload.config;
 
     // execute delete function of the provider
-    if (file.provider === config.provider) {
-      await strapi.plugins.upload.provider.delete(file);
+    //FIXME: how to delete from s3?
+    // if (file.provider === config.provider) {
+    //   await strapi.plugins.upload.provider.delete(file);
 
-      if (file.formats) {
-        await Promise.all(
-          Object.keys(file.formats).map(key => {
-            return strapi.plugins.upload.provider.delete(file.formats[key]);
-          })
-        );
-      }
-    }
+    //   if (file.formats) {
+    //     await Promise.all(
+    //       Object.keys(file.formats).map(key => {
+    //         return strapi.plugins.upload.provider.delete(file.formats[key]);
+    //       })
+    //     );
+    //   }
+    // }
 
     const media = await strapi.query('file', 'upload').findOne({
       id: file.id,
