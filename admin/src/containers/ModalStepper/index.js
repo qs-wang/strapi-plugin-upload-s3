@@ -311,6 +311,15 @@ const ModalStepper = ({
     goNext();
   };
 
+
+/**
+ * 
+ * @param {*} e 
+ * @param {*} shouldDuplicateMedia 
+ * @param {*} file 
+ * @param {*} isSubmittingAfterCrop 
+ * This function handles cropping and saving files from ** MEDIA LIBRARY **
+ */
   const handleSubmitEditExistingFile = async (
     e,
     shouldDuplicateMedia = false,
@@ -320,35 +329,72 @@ const ModalStepper = ({
     e.preventDefault();
 
     if (isSubmittingAfterCrop) {
-      emitEvent('didCropFile', { duplicatedFile: shouldDuplicateMedia, location: 'upload' });
+      emitEvent('didCropFile', {
+        duplicatedFile: shouldDuplicateMedia,
+        location: 'upload',
+      });
     }
 
     dispatch({
       type: 'ON_SUBMIT_EDIT_EXISTING_FILE',
     });
 
-    const headers = {};
-    const formData = new FormData();
-
-    // If the file has been cropped we need to add it to the formData
-    // otherwise we just don't send it
-    const didCropFile = file instanceof File;
     const { abortController, id, fileInfo } = fileToEdit;
-    const requestURL = shouldDuplicateMedia ? `/${pluginId}` : `/${pluginId}?id=${id}`;
-
-    if (didCropFile) {
-      formData.append('files', file);
-    }
-
-    formData.append('fileInfo', JSON.stringify(fileInfo));
 
     try {
+      const ext = path.extname(file.name);
+      const basename = path.basename(file.name || fileInfo.filename, ext);
+      const hash = generateFileName(basename);
+      // Q.s. request s3 put url
+      // run s3 put here
+      const filePath = file.path ? `${file.path}/` : '';
+      const s3FilePath = `${filePath}${hash}${ext}`;
+
+      const preSignedURL = await request(
+        `/${pluginId}/uploadURL?name=${s3FilePath}&type=${file.type}`
+      );
+
+      var options = {
+        headers: {
+          'Content-Type': file.type,
+        },
+      };
+
+      const response = await axios.put(preSignedURL.url, file, options);
+
+      // Need take a looks of this error handlling, the structure may be not good.
+      if (response.status != 200) {
+        throw new Error(response);
+      }
+
+      const fullFileInfo = {
+        ...fileInfo,
+        filename: file.name,
+        type: file.type,
+        size: file.size,
+        Bucket: preSignedURL.Bucket,
+        Key: preSignedURL.Key,
+        hash,
+        ext,
+      };
+
+      // const fileInfoformData = new FormData();
+
+      // fileInfoformData.append('files', JSON.stringify({
+      //   filename: file.name,
+      //   hash: file.hash,
+      //   type: file.type,
+      //   size: file.size,
+      // }));
+      // fileInfoformData.append('fileInfo', JSON.stringify(fileInfo));
+
       await request(
-        requestURL,
+        `/${pluginId}`,
         {
           method: 'POST',
-          headers,
-          body: formData,
+          body: JSON.stringify({
+            fileInfo: fullFileInfo,
+          }),
           signal: abortController.signal,
         },
         false,
@@ -357,9 +403,13 @@ const ModalStepper = ({
       // Close the modal and refetch data
       toggleRef.current(true);
     } catch (err) {
-      console.error(err);
       const status = get(err, 'response.status', get(err, 'status', null));
-      const statusText = get(err, 'response.statusText', get(err, 'statusText', null));
+      const statusText = get(
+        err,
+        'response.statusText',
+        get(err, 'statusText', null)
+      );
+
       let errorMessage = get(
         err,
         ['response', 'payload', 'message', '0', 'messages', '0', 'message'],
@@ -368,7 +418,9 @@ const ModalStepper = ({
 
       // TODO fix errors globally when the back-end sends readable one
       if (status === 413) {
-        errorMessage = formatMessage({ id: 'app.utils.errors.file-too-big.message' });
+        errorMessage = formatMessage({
+          id: 'app.utils.errors.file-too-big.message',
+        });
       }
 
       if (status) {

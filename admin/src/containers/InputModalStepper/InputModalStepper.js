@@ -1,13 +1,28 @@
-import React, { useEffect, useState, useRef, memo } from 'react';
-import PropTypes from 'prop-types';
-import { Modal, ModalFooter, PopUpWarning, useGlobalContext, request } from 'strapi-helper-plugin';
 import { Button } from '@buffetjs/core';
+import slugify from "@sindresorhus/slugify";
+import axios from "axios";
+import crypto from "crypto";
 import { get, isEmpty, isEqual } from 'lodash';
-import { getRequestUrl, getTrad } from '../../utils';
+import path from "path";
+import PropTypes from 'prop-types';
+import React, { memo, useEffect, useRef, useState } from 'react';
+import { Modal, ModalFooter, PopUpWarning, request, useGlobalContext } from 'strapi-helper-plugin';
 import ModalHeader from '../../components/ModalHeader';
-import pluginId from '../../pluginId';
-import stepper from './stepper';
 import useModalContext from '../../hooks/useModalContext';
+import pluginId from '../../pluginId';
+import { getRequestUrl, getTrad } from '../../utils';
+import stepper from './stepper';
+
+
+const nameToSlug = (name, options = { separator: "-" }) =>
+  slugify(name, options);
+
+const randomSuffix = () => crypto.randomBytes(5).toString("hex");
+
+const generateFileName = (name) => {
+  const baseName = nameToSlug(name, { separator: "_", lowercase: false });
+  return `${baseName}_${randomSuffix()}`;
+};
 
 const InputModalStepper = ({
   allowedActions,
@@ -222,6 +237,14 @@ const InputModalStepper = ({
     }
   };
 
+  /**
+   *
+   * @param {*} e
+   * @param {*} shouldDuplicateMedia
+   * @param {*} file
+   * @param {*} isSubmittingAfterCrop
+   * This function handles cropping and saving files from ** CONTENT DETAIL **
+   */
   const handleSubmitEditExistingFile = async (
     e,
     shouldDuplicateMedia = false,
@@ -239,39 +262,68 @@ const InputModalStepper = ({
       });
     }
 
-    const headers = {};
-    const formData = new FormData();
-
-    // If the file has been cropped we need to add it to the formData
-    // otherwise we just don't send it
-    const didCropFile = file instanceof File;
     const { abortController, id, fileInfo } = fileToEdit;
-    const requestURL = shouldDuplicateMedia ? `/${pluginId}` : `/${pluginId}?id=${id}`;
-
-    if (didCropFile) {
-      formData.append('files', file);
-    }
-
-    formData.append('fileInfo', JSON.stringify(fileInfo));
-
+    // The default assign didn't work
     try {
-      const editedFile = await request(
-        requestURL,
+      const ext = path.extname(file.name);
+      const basename = path.basename(file.name || fileInfo.filename, ext);
+      const hash = generateFileName(basename);
+      // Q.s. request s3 put url
+      // run s3 put here
+      const filePath = file.path ? `${file.path}/` : "";
+      const s3FilePath = `${filePath}${hash}${ext}`;
+
+      const preSignedURL = await request(
+        `/${pluginId}/uploadURL?name=${s3FilePath}&type=${file.type}`
+      );
+
+      var options = {
+        headers: {
+          'Content-Type': file.type,
+        },
+      };
+
+      const response = await axios.put(preSignedURL.url, file, options);
+
+      // Need take a looks of this error handlling, the structure may be not good.
+      if (response.status != 200) {
+        throw new Error(response);
+      }
+      const fullFileInfo = {
+        ...fileInfo,
+        filename: file.name,
+        type: file.type,
+        size: file.size,
+        Bucket: preSignedURL.Bucket,
+        Key: preSignedURL.Key,
+        mime: file.mime,
+        hash,
+        ext,
+      };
+
+      await request(
+        `/${pluginId}`,
         {
           method: 'POST',
-          headers,
-          body: formData,
+          body: JSON.stringify({
+            fileInfo: fullFileInfo,
+          }),
           signal: abortController.signal,
         },
         false,
         false
       );
-
-      handleEditExistingFile(editedFile);
+      handleEditExistingFile(fileToEdit);
       goToList();
     } catch (err) {
+      console.error(err)
       const status = get(err, 'response.status', get(err, 'status', null));
-      const statusText = get(err, 'response.statusText', get(err, 'statusText', null));
+      const statusText = get(
+        err,
+        'response.statusText',
+        get(err, 'statusText', null)
+      );
+
       let errorMessage = get(
         err,
         ['response', 'payload', 'message', '0', 'messages', '0', 'message'],
@@ -280,7 +332,9 @@ const InputModalStepper = ({
 
       // TODO fix errors globally when the back-end sends readable one
       if (status === 413) {
-        errorMessage = formatMessage({ id: 'app.utils.errors.file-too-big.message' });
+        errorMessage = formatMessage({
+          id: 'app.utils.errors.file-too-big.message',
+        });
       }
 
       if (status) {
