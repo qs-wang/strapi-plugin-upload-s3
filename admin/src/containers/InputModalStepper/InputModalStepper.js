@@ -266,12 +266,19 @@ const InputModalStepper = ({
     // The default assign didn't work
     try {
       const ext = path.extname(file.name);
-      const basename = path.basename(file.name || fileInfo.filename, ext);
+      const basename = path.basename(
+        shouldDuplicateMedia
+          ? file.name || fileInfo.filename
+          : fileToEdit.file.url,
+        ext
+      );
       const hash = generateFileName(basename);
       // Q.s. request s3 put url
       // run s3 put here
       const filePath = file.path ? `${file.path}/` : "";
-      const s3FilePath = `${filePath}${hash}${ext}`;
+      const s3FilePath = `${filePath}${
+        shouldDuplicateMedia ? hash : basename
+      }${ext}`;
 
       const preSignedURL = await request(
         `/${pluginId}/uploadURL?name=${s3FilePath}&type=${file.type}`
@@ -301,10 +308,12 @@ const InputModalStepper = ({
         ext,
       };
 
+      const query = shouldDuplicateMedia ? "" : `?id=${id}`;
+
       await request(
-        `/${pluginId}`,
+        `/${pluginId}${query}`,
         {
-          method: 'POST',
+          method: "POST",
           body: JSON.stringify({
             fileInfo: fullFileInfo,
           }),
