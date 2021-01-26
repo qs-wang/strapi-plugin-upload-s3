@@ -237,6 +237,14 @@ const InputModalStepper = ({
     }
   };
 
+  /**
+   *
+   * @param {*} e
+   * @param {*} shouldDuplicateMedia
+   * @param {*} file
+   * @param {*} isSubmittingAfterCrop
+   * This function handles cropping and saving files from ** CONTENT DETAIL **
+   */
   const handleSubmitEditExistingFile = async (
     e,
     shouldDuplicateMedia = false,
