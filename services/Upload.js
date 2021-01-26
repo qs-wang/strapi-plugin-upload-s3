@@ -64,7 +64,7 @@ module.exports = {
       caption: fileInfo.caption,
       hash: fileInfo.hash,
       ext,
-      mime: fileInfo.type,
+      mime: fileInfo.type || fileInfo.mime,
       size: bytesToKbytes(fileInfo.size),
       Bucket: fileInfo.Bucket,
       Key: fileInfo.Key,
