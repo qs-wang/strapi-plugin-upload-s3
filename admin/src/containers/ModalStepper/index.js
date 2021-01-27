@@ -343,12 +343,26 @@ const ModalStepper = ({
 
     try {
       const ext = path.extname(file.name);
-      const basename = path.basename(file.name || fileInfo.filename, ext);
+      if (!shouldDuplicateMedia) {
+        // check if file extension changed
+        const originalExt = path.extname(initialFileToEdit.file.name)
+        if (ext !== originalExt) {
+          throw new Error(`Cannot replace ${originalExt} with ${ext}`)
+        }
+      }
+      const basename = path.basename(
+        shouldDuplicateMedia
+          ? file.name || fileInfo.filename
+          : initialFileToEdit.file.url,
+        ext
+      );
       const hash = generateFileName(basename);
       // Q.s. request s3 put url
       // run s3 put here
       const filePath = file.path ? `${file.path}/` : '';
-      const s3FilePath = `${filePath}${hash}${ext}`;
+      const s3FilePath = `${filePath}${
+        shouldDuplicateMedia ? hash : basename
+      }${ext}`;
 
       const preSignedURL = await request(
         `/${pluginId}/uploadURL?name=${s3FilePath}&type=${file.type}`
@@ -378,20 +392,12 @@ const ModalStepper = ({
         ext,
       };
 
-      // const fileInfoformData = new FormData();
-
-      // fileInfoformData.append('files', JSON.stringify({
-      //   filename: file.name,
-      //   hash: file.hash,
-      //   type: file.type,
-      //   size: file.size,
-      // }));
-      // fileInfoformData.append('fileInfo', JSON.stringify(fileInfo));
+      const query = shouldDuplicateMedia ? '':`?id=${id}`;
 
       await request(
-        `/${pluginId}`,
+        `/${pluginId}${query}`,
         {
-          method: 'POST',
+          method: "POST",
           body: JSON.stringify({
             fileInfo: fullFileInfo,
           }),
@@ -407,7 +413,8 @@ const ModalStepper = ({
       const statusText = get(
         err,
         'response.statusText',
-        get(err, 'statusText', null)
+        get(err, 'statusText', 
+        get(err, 'message'))
       );
 
       let errorMessage = get(
@@ -423,12 +430,10 @@ const ModalStepper = ({
         });
       }
 
-      if (status) {
-        dispatch({
-          type: 'SET_FILE_TO_EDIT_ERROR',
-          errorMessage,
-        });
-      }
+      dispatch({
+        type: 'SET_FILE_TO_EDIT_ERROR',
+        errorMessage,
+      });
     }
   };
 

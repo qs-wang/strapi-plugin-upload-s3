@@ -47,7 +47,7 @@ const List = ({
           const fileUrl = prefixFileUrlWithBackendUrl(url);
 
           return (
-            <ListCell key={id}>
+            <ListCell key={id + item.updated_at}>
               <Card
                 isDisabled={!isAllowed}
                 checked={checked}
@@ -59,7 +59,10 @@ const List = ({
                 {(checked || canSelect) && (
                   <>
                     {(checked || isAllowed) && showCheckbox && (
-                      <CardControlsWrapper leftAlign className="card-control-wrapper">
+                      <CardControlsWrapper
+                        leftAlign
+                        className="card-control-wrapper"
+                      >
                         <Checkbox
                           name={`${id}`}
                           onChange={onChange}
