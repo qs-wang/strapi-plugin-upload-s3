@@ -266,10 +266,17 @@ const InputModalStepper = ({
     // The default assign didn't work
     try {
       const ext = path.extname(file.name);
+      if (!shouldDuplicateMedia) {
+        // check if file extension changed
+        const originalExt = path.extname(initialFileToEdit.file.name);
+        if (ext !== originalExt) {
+          throw new Error(`Cannot replace ${originalExt} with ${ext}`);
+        }
+      }
       const basename = path.basename(
         shouldDuplicateMedia
           ? file.name || fileInfo.filename
-          : fileToEdit.file.url,
+          : initialFileToEdit.file.url,
         ext
       );
       const hash = generateFileName(basename);
@@ -330,7 +337,8 @@ const InputModalStepper = ({
       const statusText = get(
         err,
         'response.statusText',
-        get(err, 'statusText', null)
+        get(err, 'statusText',
+        get(err, 'message'))
       );
 
       let errorMessage = get(
@@ -346,9 +354,8 @@ const InputModalStepper = ({
         });
       }
 
-      if (status) {
-        handleSetFileToEditError(errorMessage);
-      }
+      handleSetFileToEditError(errorMessage);
+      
     }
   };
 

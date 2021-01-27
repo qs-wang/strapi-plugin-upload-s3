@@ -343,10 +343,17 @@ const ModalStepper = ({
 
     try {
       const ext = path.extname(file.name);
+      if (!shouldDuplicateMedia) {
+        // check if file extension changed
+        const originalExt = path.extname(initialFileToEdit.file.name)
+        if (ext !== originalExt) {
+          throw new Error(`Cannot replace ${originalExt} with ${ext}`)
+        }
+      }
       const basename = path.basename(
         shouldDuplicateMedia
           ? file.name || fileInfo.filename
-          : fileToEdit.file.url,
+          : initialFileToEdit.file.url,
         ext
       );
       const hash = generateFileName(basename);
@@ -406,7 +413,8 @@ const ModalStepper = ({
       const statusText = get(
         err,
         'response.statusText',
-        get(err, 'statusText', null)
+        get(err, 'statusText', 
+        get(err, 'message'))
       );
 
       let errorMessage = get(
@@ -422,12 +430,10 @@ const ModalStepper = ({
         });
       }
 
-      if (status) {
-        dispatch({
-          type: 'SET_FILE_TO_EDIT_ERROR',
-          errorMessage,
-        });
-      }
+      dispatch({
+        type: 'SET_FILE_TO_EDIT_ERROR',
+        errorMessage,
+      });
     }
   };
 
