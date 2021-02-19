@@ -192,11 +192,7 @@ module.exports = {
     // });
 
     if (isImage(fileData.name)){
-      if(strapi.plugins.upload.config.AWS_REGION){
-        fileData.url = `https://${fileData.Bucket}.s3-${strapi.plugins.upload.config.AWS_REGION}.amazonaws.com/${fileData.Key}`;
-      }else{
-        fileData.url = `https://${fileData.Bucket}.s3.amazonaws.com/${fileData.Key}`;
-      }
+        fileData.url = fileData.Key;
     }else{
       fileData.url = `S3://${fileData.Bucket}/${fileData.Key}`;
     }
